@@ -1,0 +1,4 @@
+[submodule "third-party/minorseq"]
+	path = third-party/minorseq
+	url = https://github.com/pacificbiosciences/minorseq.git
+	branch = master
