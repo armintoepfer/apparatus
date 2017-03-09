@@ -41,6 +41,8 @@ static int Runner(const PacBio::CLI::Results& options)
         while (reader.GetNext(sequence))
             arrayReads.emplace_back(Apparatus::FastaArrayRead(sequence, idx++));
 
+        if (arrayReads.empty()) continue;
+
         PacBio::Data::MSAByColumn msa(arrayReads);
         size_t length = msa.counts.size();
         if (length != reference.Bases.size())
