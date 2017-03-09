@@ -12,7 +12,7 @@ import random
 import sys
 
 # cut the text in semi-redundant sequences of maxlen characters
-maxlen = 50
+maxlen = 100
 train_size = 500
 test_size = 100
 ver_size = 100
@@ -31,7 +31,7 @@ ref_base_test = {}
 def fill_matrix(M, t, i, d):
     M[t, i, :] = d
 
-with open("test") as f:
+with open("training") as f:
     t = 0
     i = 0
     for row in f:
@@ -58,7 +58,7 @@ with open("test") as f:
             break
 
         i += 1
-        if i == 50:
+        if i == maxlen:
             i = 0
             t += 1
 

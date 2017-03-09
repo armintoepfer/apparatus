@@ -14,6 +14,8 @@ static int Runner(const PacBio::CLI::Results& options)
 {
     using namespace PacBio::BAM;
 
+    const size_t desiredLength = 100;
+
     // Get source args
     const std::vector<std::string> files = options.PositionalArguments();
 
@@ -48,9 +50,9 @@ static int Runner(const PacBio::CLI::Results& options)
         if (length != reference.Bases.size())
             throw std::runtime_error("Length mismatch!");
 
-        std::uniform_int_distribution<int> uniform_dist(0, length - 50);
+        std::uniform_int_distribution<int> uniform_dist(0, length - desiredLength);
         size_t start = uniform_dist(e1);
-        for (size_t i = start; i < start + 50; ++i)
+        for (size_t i = start; i < start + desiredLength; ++i)
         {
             const auto& c = msa[i];
             const int r =
