@@ -13,12 +13,11 @@
 
 #include <pacbio/data/ArrayRead.h>
 
-namespace Apparatus
-{
+namespace Apparatus {
 
 class FastaArrayRead : public PacBio::Data::ArrayRead
 {
-public: // ctors
+public:  // ctors
     FastaArrayRead(const PacBio::BAM::FastaSequence& record, int idx)
         : PacBio::Data::ArrayRead(idx, record.Name()), Record(record)
     {
@@ -35,4 +34,4 @@ public: // ctors
 private:
     const PacBio::BAM::FastaSequence Record;
 };
-} // namespace Apparatus
+}  // namespace Apparatus

@@ -19,8 +19,7 @@ static int Runner(const PacBio::CLI::Results& options)
     // Get source args
     const std::vector<std::string> files = options.PositionalArguments();
 
-    if (files.size() == 0)
-    {
+    if (files.size() == 0) {
         std::cerr << "ERROR: INPUT EMPTY." << std::endl;
         return EXIT_FAILURE;
     }
@@ -28,8 +27,7 @@ static int Runner(const PacBio::CLI::Results& options)
     std::random_device r;
     std::default_random_engine e1(r());
 
-    for (const auto& input : files)
-    {
+    for (const auto& input : files) {
         FastaReader reader(input);
 
         int idx = 0;
@@ -37,8 +35,7 @@ static int Runner(const PacBio::CLI::Results& options)
         FastaSequence sequence;
         // First sequence is the reference
         reader.GetNext(sequence);
-        PacBio::Data::ArrayRead reference(
-            Apparatus::FastaArrayRead(sequence, idx++));
+        PacBio::Data::ArrayRead reference(Apparatus::FastaArrayRead(sequence, idx++));
         // Actual subreads
         while (reader.GetNext(sequence))
             arrayReads.emplace_back(Apparatus::FastaArrayRead(sequence, idx++));
@@ -47,16 +44,13 @@ static int Runner(const PacBio::CLI::Results& options)
 
         PacBio::Data::MSAByColumn msa(arrayReads);
         size_t length = msa.counts.size();
-        if (length != reference.Bases.size())
-            throw std::runtime_error("Length mismatch!");
+        if (length != reference.Bases.size()) throw std::runtime_error("Length mismatch!");
 
         std::uniform_int_distribution<int> uniform_dist(0, length - desiredLength);
         size_t start = uniform_dist(e1);
-        for (size_t i = start; i < start + desiredLength; ++i)
-        {
+        for (size_t i = start; i < start + desiredLength; ++i) {
             const auto& c = msa[i];
-            const int r =
-                PacBio::Data::NucleotideToTag(reference.Bases[i].Nucleotide);
+            const int r = PacBio::Data::NucleotideToTag(reference.Bases[i].Nucleotide);
             // std::cerr << c.refPos;
             for (const auto& b : {'A', 'C', 'G', 'T', '-'})
                 std::cerr << c.Frequency(b) << " ";
@@ -71,11 +65,10 @@ static int Runner(const PacBio::CLI::Results& options)
 static PacBio::CLI::Interface CreateCLI()
 {
     using Option = PacBio::CLI::Option;
-    PacBio::CLI::Interface i{"mafft_pileup", "Pileup for MAFFT alignments.",
-                             "0.0.1"};
+    PacBio::CLI::Interface i{"mafft_pileup", "Pileup for MAFFT alignments.", "0.0.1"};
 
-    i.AddHelpOption();    // use built-in help output
-    i.AddVersionOption(); // use built-in version output
+    i.AddHelpOption();     // use built-in help output
+    i.AddVersionOption();  // use built-in version output
 
     i.AddPositionalArguments({{"input", "Input file.", "INPUT"}});
 
@@ -83,7 +76,4 @@ static PacBio::CLI::Interface CreateCLI()
 }
 
 // Entry point
-int main(int argc, char* argv[])
-{
-    return PacBio::CLI::Run(argc, argv, CreateCLI(), &Runner);
-}
+int main(int argc, char* argv[]) { return PacBio::CLI::Run(argc, argv, CreateCLI(), &Runner); }
