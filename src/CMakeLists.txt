@@ -52,3 +52,4 @@ include_directories(
 
 create_exe(extract_subreads)
 create_exe(mafft_pileup)
+create_exe(juliet_pileup)
