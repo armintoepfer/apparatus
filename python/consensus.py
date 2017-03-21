@@ -2,96 +2,116 @@
 
 from __future__ import print_function
 from keras.models import Sequential
-from keras.layers import Dense, Activation, Dropout, TimeDistributed
+from keras.layers import Dense, Activation, Dropout, TimeDistributed, Convolution1D, Conv2D
 from keras.layers import LSTM, GRU
 from keras.optimizers import RMSprop
 from keras.utils.data_utils import get_file
-from keras.regularizers import l1l2, l1, l2, activity_l2, activity_l1l2, activity_l1
+from keras.models import load_model
+from keras.layers import Dense, Dropout, Flatten
+import glob
+import os
 import numpy as np
 import random
 import sys
 
-# cut the text in semi-redundant sequences of maxlen characters
-maxlen = 100
-train_size = 500
-test_size = 100
-ver_size = 100
+learn = True
 
-X = np.zeros((train_size, maxlen, 5), dtype=np.uint8)
-y = np.zeros((train_size, maxlen, 5), dtype=np.bool)
+# cut the text in semi-redundant sequences of region_size characters
+region_size = 21
 
-X_test = np.zeros((test_size, maxlen, 5), dtype=np.uint8)
-y_test = np.zeros((test_size, maxlen, 5), dtype=np.bool)
+train_size = 1000
+test_size = 1000
+ver_size = 230
 
-X_ver = np.zeros((ver_size, maxlen, 5), dtype=np.uint8)
-y_ver = np.zeros((ver_size, maxlen, 5), dtype=np.bool)
+col = 6
+
+# input_num_units = col * region_size
+# hidden_num_units = 50
+# output_num_units = 2
+
+X = np.zeros((train_size, region_size, col), dtype=np.float32)
+Y = np.zeros((train_size, 2), dtype=np.bool)
+
+X_test = np.zeros((test_size, region_size, col), dtype=np.float32)
+Y_test = np.zeros((test_size, 2), dtype=np.bool)
+
+X_ver = np.zeros((ver_size, region_size, col), dtype=np.float32)
+Y_ver = np.zeros((ver_size, 2), dtype=np.bool)
+
 ref_base = {}
 ref_base_test = {}
 
-def fill_matrix(M, t, i, d):
-    M[t, i, :] = d
+basemap = dict(zip("ACGT- N", range(0, 7)))
 
-with open("training") as f:
-    t = 0
+
+def fill(f, m, n, t, hit):
     i = 0
     for row in f:
         row = row.strip().split()
-
-        d = [ int(float(row[0]) * float(row[5])),
-               int(float(row[1]) * float(row[5])),
-               int(float(row[2]) * float(row[5])),
-               int(float(row[3]) * float(row[5])),
-               int(float(row[4]) * float(row[5])) ]
-
-        if t < train_size:
-            X[t, i, :] = d
-            y[t, i, int(row[6])] = 1
-        elif t < train_size + test_size:
-            X_test[t-train_size, i, :] = d
-            y_test[t-train_size, i, int(row[6])] = 1
-            ref_base_test[(t, i)] = row[6]
-        elif t < train_size + test_size + ver_size:
-            X_ver[t-train_size-ver_size, i, :] = d
-            y_ver[t-train_size-ver_size, i, int(row[6])] = 1
-            ref_base_test[(t, i)] = row[6]
-        else:
-            break
-
+        m[t, i, :] = [float(row[0]), float(row[1]), float(row[2]),
+                      float(row[3]), float(row[4]), float(row[5])]
         i += 1
-        if i == maxlen:
-            i = 0
-            t += 1
-
-# build the model: a single LSTM
-print('Build model...')
-model = Sequential()
-model.add(GRU(24, input_shape=(maxlen, 5), return_sequences=True))
-# model.add(LSTM(24, input_shape=(maxlen, 5), return_sequences=True))
-model.add(Dropout(0.25))
-# model.add(TimeDistributed(Dense(5, activation='softmax')))
-model.add(TimeDistributed(Dense(5, activation='softmax')))#, input_dim=5, W_regularizer=l1l2(l1=0.01, l2=0.01), activity_regularizer=activity_l1l2(l1=0.01, l2=0.01))))
-#model.add(Activation('softmax'))
-model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    n[t, int(hit)] = True
 
 
-# train the model, output generated text after each iteration
-for iteration in range(1, 50):
-    print()
-    print('-' * 50)
-    print('Iteration', iteration)
-    model.fit(X, y, verbose=2, validation_data=(X_test,y_test), batch_size=20, nb_epoch=1)
+if learn:
+    def lstm_model():
+        model = Sequential()
+        # model.add(GRU(10, input_shape=(region_size, col), return_sequences=True))
+        # model.add(Convolution1D(100, 26, border_mode='valid', activation='relu', input_shape=(region_size, col)))
+        # model.add(GRU(128, return_sequences=True, input_shape=(region_size, col)))
+        # model.add(LSTM(input_length=num_reads, input_dim=region_size,
+        # output_dim=num_reads * region_size, return_sequences=True))
 
+        model.add(LSTM(region_size * col, return_sequences=True,
+                       input_shape=(region_size, col)))  # , dropout_W=0.2, dropout_U=0.2))
+        model.add(Dropout(0.25))
+        model.add(Flatten())
+        # model.add(LSTM(100))
+        model.add((
+            Dense(2, activation='sigmoid')))
+        model.compile(loss='categorical_crossentropy',
+                      optimizer='adam', metrics=['accuracy'])
+        return model
+
+print("Start parsing")
+t = 0
+for file in glob.glob("/Users/atoepfer/tf_data/train/mix*"):
+    # sys.stdout.write('.')
+    # sys.stdout.flush()
+    with open(file) as f:
+        if t < train_size:
+            fill(f, X, Y, t, file.endswith("1"))
+        elif t - train_size < test_size:
+            fill(f, X_test, Y_test, t - train_size, file.endswith("1"))
+        t += 1
+t = 0
+for file in glob.glob("/Users/atoepfer/tf_data/ver/mix*"):
+    with open(file) as f:
+        fill(f, X_ver, Y_ver, t, file.endswith("1"))
+        t += 1
+
+print("End parsing")
+if learn:
+    model = lstm_model()
+    print(model.summary())
+    trained_model = model.fit(X, Y, epochs=10,
+                              batch_size=10, validation_data=(X_test, Y_test))
+
+    model.save("model.h5")
+else:
+    model = load_model("model.h5")
+
+i = 0
 tp = 0
 ap = 0
-t = train_size + ver_size
 preds = model.predict_classes(X_ver, verbose=0)
 for p in preds:
-    i = 0
-    for pp in p:
-        if int(ref_base_test[(t,i)]) == int(pp):
-            tp += 1;
-        ap += 1
-        i+=1
-    t+=1
-
-print(tp,ap,tp/ap)
+    truth = int(Y_ver[i, 1])
+    if truth == p:
+        tp += 1
+    else:
+        print(Y_ver[i, 1], p)
+    ap += 1
+    i += 1
+print(tp, ap, tp / ap)
