@@ -28,10 +28,20 @@ static int Runner(const PacBio::CLI::Results& options)
     std::random_device r;
     std::default_random_engine e1(r());
 
-    std::vector<int> mut = {294, 295, 296,  345,  448,  466,  467,
-                            468, 470, 1101, 1251, 1557, 1559, 164};
+    std::vector<int> mut;
 
-    for (const auto& input : files) {
+    switch (std::stoi(files.front())) {
+        case 0:
+            mut = {294, 295, 296, 345, 448, 466, 467, 468, 470, 1101, 1251, 1557, 1559, 164};
+            break;
+        case 1:
+            mut = {2273, 2669, 2742, 2848, 3090, 3117, 3191, 3192};
+            break;
+        default:
+            throw std::runtime_error("Unknown first input");
+    }
+    for (size_t f = 1; f < files.size(); ++f) {
+        const auto& input = files.at(f);
         auto arrayReads = PacBio::IO::BamToArrayReads(input);
 
         if (arrayReads.empty()) continue;
@@ -74,11 +84,12 @@ static int Runner(const PacBio::CLI::Results& options)
             }
         };
 
-        for (const auto& m : mut) {
-            generate(m - 10);
-            ++x;
-        }
-        for (int y = 0; y < 50; ++y) {
+        for (int z = 0; z < 10; ++z)
+            for (const auto& m : mut) {
+                generate(m - 10);
+                ++x;
+            }
+        for (int y = 0; y < 100; ++y) {
             size_t start = uniform_dist(e1);
             while (std::find(mut.cbegin(), mut.cend(), start + 10) != mut.cend())
                 start = uniform_dist(e1);
